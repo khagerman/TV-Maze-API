@@ -27,11 +27,12 @@ async function searchShows(query) {
         id: res.show.id,
         name: res.show.name,
         summary: res.show.summary,
-        image: res.show.image.original || "tinyurl.com/tv-missing",
+        image: res.show.image
+          ? res.show.image.medium
+          : "https://tinyurl.com/tv-missing",
       };
     });
     console.log(shows);
-
     return shows;
   } catch (e) {
     alert("TV show not found :(");
@@ -44,18 +45,21 @@ async function searchShows(query) {
 const showsList = document.querySelector("#shows-list");
 function populateShows(shows) {
   showsList.innerHTML = "";
-  let item = "";
-  for (let show of shows) {
-    item.innerHTML = `<div class="col-md-6 col-lg-3 Show" data-show-id="${show.id}">
-         <div class="card" data-show-id="${show.id}">
-           <div class="card-body">
-             <h5 class="card-title">${show.name}</h5>
-             <p class="card-text">${show.summary}</p>
-           </div>
-         </div>
-       </div>
-      `;
 
+  for (let show of shows) {
+    let item = document.createElement("div");
+    item.className = `col-md-6 col-lg-3 Show" data-show-id="${show.id}`;
+    item.innerHTML = `
+        <div class="card" data-show-id="${show.id}">
+           <div class="card-body">
+           <img class="card-img-top" src="${show.image}">
+            <h5 class="card-title">${show.name}</h5>
+             <p class="card-text">${show.summary}</p>
+             <button id="episodebtn" class="btn btn-info">Episode Info</button>
+           </div>
+          </div>
+      </div>
+      `;
     showsList.append(item);
   }
 }
@@ -69,7 +73,7 @@ submit.addEventListener("click", async function (e) {
   e.preventDefault();
 
   let query = document.querySelector("#search-query").value;
-
+  console.log(query);
   if (!query) return;
 
   document.querySelector("#episodes-area").style.display = "none";
@@ -84,8 +88,34 @@ submit.addEventListener("click", async function (e) {
  */
 
 async function getEpisodes(id) {
-  // TODO: get episodes from tvmaze
-  //       you can get this by making GET request to
-  //       http://api.tvmaze.com/shows/SHOW-ID-HERE/episodes
-  // TODO: return array-of-episode-info, as described in docstring above
+  const url = `http://api.tvmaze.com/shows/${id}/episodes`;
+  const res = await axios.get(url);
+  let episodes = res.data.map((episode) => {
+    return {
+      id: episode.id,
+      name: episode.name,
+      season: episode.season,
+      number: episode.number,
+    };
+  });
+  return episodes;
 }
+//
+// data-show-id="${show.id}"
+async function populateEpisodes(episode) {
+  for (let episode of episodes) {
+    let episodeList = document.querySelector("#episodes-list");
+    let newLI = document.createElement("LI");
+    newLI.innerText = `${episode.name}
+         (season ${episode.season}, episode ${episode.number})`;
+    episodeList.append(newLI);
+  }
+}
+
+document.addEventListener("click", async function (e) {
+  document.querySelector("#episodes-area").style.display = "";
+  if (e.target.id == "episodebtn") {
+    console.log(e.target.closest("div"));
+    let id = e.target.closest(".col-md-6 col-lg-3 Show").dataset.showId;
+  }
+});
