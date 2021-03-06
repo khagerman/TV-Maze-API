@@ -22,45 +22,46 @@ async function searchShows(query) {
   try {
     const url = `http://api.tvmaze.com/search/shows?q=${query}`;
     const res = await axios.get(url);
-    let shows = res.data.map((res) => {
+    let shows = res.data.map((result) => {
       return {
-        id: res.show.id,
-        name: res.show.name,
-        summary: res.show.summary,
-        image: res.show.image
-          ? res.show.image.medium
+        id: result.show.id,
+        year: result.show.premiered.slice(0, 4),
+        name: result.show.name,
+        summary: result.show.summary,
+        image: result.show.image
+          ? result.show.image.medium
           : "https://tinyurl.com/tv-missing",
       };
     });
-    console.log(shows);
     return shows;
   } catch (e) {
-    alert("TV show not found :(");
+    alert("TV show not found!!");
   }
 }
 
 /** Populate shows list:
  *     - given list of shows, add shows to DOM
  */
-const showsList = document.querySelector("#shows-list");
+
 function populateShows(shows) {
-  showsList.innerHTML = "";
+  const $showsList = $("#shows-list");
+  $showsList.empty();
 
   for (let show of shows) {
-    let item = document.createElement("div");
-    item.className = `col-md-6 col-lg-3 Show" data-show-id="${show.id}`;
-    item.innerHTML = `
-        <div class="card" data-show-id="${show.id}">
+    let $item = $(
+      `<div class="col-md-6 col-lg-3 Show" data-show-id="${show.id}">
+         <div class="card" data-show-id="${show.id}">
            <div class="card-body">
            <img class="card-img-top" src="${show.image}">
             <h5 class="card-title">${show.name}</h5>
+            <h6>Premiered: ${show.year}</h6>
              <p class="card-text">${show.summary}</p>
-             <button id="episodebtn" class="btn btn-info">Episode Info</button>
+             <button  class="btn btn-info get-episodes">Episode Info</button>
            </div>
-          </div>
-      </div>
-      `;
-    showsList.append(item);
+      `
+    );
+
+    $showsList.append($item);
   }
 }
 
@@ -68,15 +69,13 @@ function populateShows(shows) {
  *    - hide episodes area
  *    - get list of matching shows and show in shows list
  */
-const submit = document.querySelector("#submit");
-submit.addEventListener("click", async function (e) {
-  e.preventDefault();
 
-  let query = document.querySelector("#search-query").value;
-  console.log(query);
-  if (!query) return;
+$("#search-form").on("submit", async function handleSearch(evt) {
+  evt.preventDefault();
 
-  document.querySelector("#episodes-area").style.display = "none";
+  let query = $("#search-query").val();
+
+  $("#episodes-area").hide();
 
   let shows = await searchShows(query);
 
@@ -100,22 +99,29 @@ async function getEpisodes(id) {
   });
   return episodes;
 }
-//
-// data-show-id="${show.id}"
-async function populateEpisodes(episode) {
-  for (let episode of episodes) {
-    let episodeList = document.querySelector("#episodes-list");
-    let newLI = document.createElement("LI");
-    newLI.innerText = `${episode.name}
-         (season ${episode.season}, episode ${episode.number})`;
-    episodeList.append(newLI);
-  }
-}
+async function populateEpisodes(episodes) {
+  const $episodesList = $("#episodes-list");
+  $episodesList.empty();
 
-document.addEventListener("click", async function (e) {
-  document.querySelector("#episodes-area").style.display = "";
-  if (e.target.id == "episodebtn") {
-    console.log(e.target.closest("div"));
-    let id = e.target.closest(".col-md-6 col-lg-3 Show").dataset.showId;
+  for (let episode of episodes) {
+    let $item = $(
+      `<li>
+         ${episode.name}
+         (season ${episode.season}, episode ${episode.number})
+       </li>
+      `
+    );
+
+    $episodesList.append($item);
   }
-});
+  $("#episodes-area").show();
+}
+$("#shows-list").on(
+  "click",
+  ".get-episodes",
+  async function handleEpisodeClick(e) {
+    let id = $(e.target).closest(".Show").data("show-id");
+    let episodes = await getEpisodes(id);
+    populateEpisodes(episodes);
+  }
+);
